@@ -1,0 +1,4 @@
+# Core CLI uses only the Python standard library (sqlite3, argparse, csv).
+# Needed for the spending chart step:
+plotly
+pandas
