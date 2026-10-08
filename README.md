@@ -10,6 +10,16 @@ pip install -r requirements.txt   # only needed for the chart step
 python -m expense_tracker.db      # creates expenses.db with the schema
 ```
 
+## Usage
+
+```
+python -m expense_tracker.cli add 12.50 Food -d "lunch" --date 2026-10-07
+python -m expense_tracker.cli list
+python -m expense_tracker.cli delete 1
+```
+
+Use `--db path.db` (before the command) to pick a database file; default is `expenses.db`.
+
 ## Schema
 
 - `categories(id, name UNIQUE)`
@@ -26,7 +36,7 @@ python -m unittest discover -s tests -v
 ## Roadmap
 
 - [x] Scaffold: README, requirements, .gitignore, sqlite3 schema init
-- [ ] Add / list / delete entry CLI commands
+- [x] Add / list / delete entry CLI commands
 - [ ] Category filtering + monthly summary report
 - [ ] CSV export
 - [ ] Plotly chart of spending by category/month + polish
