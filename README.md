@@ -15,6 +15,8 @@ python -m expense_tracker.db      # creates expenses.db with the schema
 ```
 python -m expense_tracker.cli add 12.50 Food -d "lunch" --date 2026-10-07
 python -m expense_tracker.cli list
+python -m expense_tracker.cli list -c food        # filter by category (case-insensitive)
+python -m expense_tracker.cli report 2026-10      # monthly totals per category (default: this month)
 python -m expense_tracker.cli delete 1
 ```
 
@@ -37,6 +39,6 @@ python -m unittest discover -s tests -v
 
 - [x] Scaffold: README, requirements, .gitignore, sqlite3 schema init
 - [x] Add / list / delete entry CLI commands
-- [ ] Category filtering + monthly summary report
+- [x] Category filtering + monthly summary report
 - [ ] CSV export
 - [ ] Plotly chart of spending by category/month + polish

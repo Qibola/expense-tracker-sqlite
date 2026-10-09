@@ -1,4 +1,4 @@
-"""Data-access functions: add, list and delete expenses."""
+"""Data-access functions: add, list, delete and summarise expenses."""
 from datetime import date as _date
 
 
@@ -12,14 +12,17 @@ def _validate_date(value):
 
 
 def get_or_create_category(conn, name):
-    """Return the id of the category, creating it if needed."""
+    """Return the id of the category (case-insensitive), creating it if needed."""
     name = name.strip()
     if not name:
         raise ValueError("category name cannot be empty")
+    row = conn.execute(
+        "SELECT id FROM categories WHERE name = ? COLLATE NOCASE", (name,)).fetchone()
+    if row:  # reuse existing category regardless of letter case
+        return row["id"]
     with conn:
-        conn.execute("INSERT OR IGNORE INTO categories(name) VALUES (?)", (name,))
-    return conn.execute(
-        "SELECT id FROM categories WHERE name = ?", (name,)).fetchone()["id"]
+        cur = conn.execute("INSERT INTO categories(name) VALUES (?)", (name,))
+    return cur.lastrowid
 
 
 def add_expense(conn, amount, category, description="", date=None):
@@ -36,12 +39,36 @@ def add_expense(conn, amount, category, description="", date=None):
     return cur.lastrowid
 
 
-def list_expenses(conn):
-    """Return all expenses (newest first) joined with their category name."""
-    return conn.execute(
-        "SELECT e.id, e.date, e.amount, e.description, c.name AS category "
+def list_expenses(conn, category=None):
+    """Return expenses (newest first) with their category name.
+
+    If ``category`` is given, only that category is returned (case-insensitive).
+    """
+    sql = ("SELECT e.id, e.date, e.amount, e.description, c.name AS category "
+           "FROM expenses e JOIN categories c ON c.id = e.category_id ")
+    params = ()
+    if category is not None:
+        sql += "WHERE c.name = ? COLLATE NOCASE "
+        params = (category.strip(),)
+    sql += "ORDER BY e.date DESC, e.id DESC"
+    return conn.execute(sql, params).fetchall()
+
+
+def monthly_summary(conn, month):
+    """Total spending per category for a month ('YYYY-MM'), biggest first.
+
+    Returns a list of (category, total) tuples.
+    """
+    try:
+        _date.fromisoformat(month + "-01")
+    except (TypeError, ValueError):
+        raise ValueError(f"invalid month {month!r}; use YYYY-MM") from None
+    rows = conn.execute(
+        "SELECT c.name AS category, SUM(e.amount) AS total "
         "FROM expenses e JOIN categories c ON c.id = e.category_id "
-        "ORDER BY e.date DESC, e.id DESC").fetchall()
+        "WHERE substr(e.date, 1, 7) = ? "
+        "GROUP BY c.id ORDER BY total DESC, c.name", (month,)).fetchall()
+    return [(r["category"], r["total"]) for r in rows]
 
 
 def delete_expense(conn, expense_id):

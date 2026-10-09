@@ -1,6 +1,7 @@
 """Command-line interface: python -m expense_tracker.cli <command>."""
 import argparse
 import sys
+from datetime import date
 
 from . import db, store
 
@@ -17,7 +18,12 @@ def build_parser():
     add.add_argument("-d", "--description", default="")
     add.add_argument("--date", help="YYYY-MM-DD (default: today)")
 
-    sub.add_parser("list", help="list all expenses")
+    ls = sub.add_parser("list", help="list expenses")
+    ls.add_argument("-c", "--category", help="only show this category")
+
+    rep = sub.add_parser("report", help="monthly spending by category")
+    rep.add_argument("month", nargs="?",
+                     help="YYYY-MM (default: current month)")
 
     rm = sub.add_parser("delete", help="delete an expense by id")
     rm.add_argument("id", type=int)
@@ -34,6 +40,16 @@ def format_table(rows):
     return "\n".join(lines)
 
 
+def format_report(month, summary):
+    if not summary:
+        return f"No expenses in {month}."
+    lines = [f"Spending for {month}", f"{'Category':<12}  {'Total':>9}"]
+    for name, total in summary:
+        lines.append(f"{name:<12}  {total:>9.2f}")
+    lines.append(f"{'TOTAL':<12}  {sum(t for _, t in summary):>9.2f}")
+    return "\n".join(lines)
+
+
 def main(argv=None, out=sys.stdout):
     args = build_parser().parse_args(argv)
     conn = db.init_db(args.db)
@@ -43,7 +59,10 @@ def main(argv=None, out=sys.stdout):
                                        args.description, args.date)
             print(f"Added expense #{new_id}", file=out)
         elif args.command == "list":
-            print(format_table(store.list_expenses(conn)), file=out)
+            print(format_table(store.list_expenses(conn, args.category)), file=out)
+        elif args.command == "report":
+            month = args.month or date.today().strftime("%Y-%m")
+            print(format_report(month, store.monthly_summary(conn, month)), file=out)
         elif args.command == "delete":
             if store.delete_expense(conn, args.id):
                 print(f"Deleted expense #{args.id}", file=out)
