@@ -1,5 +1,8 @@
-"""Data-access functions: add, list, delete and summarise expenses."""
+"""Data-access functions: add, list, delete, summarise and export expenses."""
+import csv
 from datetime import date as _date
+
+CSV_FIELDS = ["id", "date", "amount", "category", "description"]
 
 
 def _validate_date(value):
@@ -76,3 +79,18 @@ def delete_expense(conn, expense_id):
     with conn:
         cur = conn.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
     return cur.rowcount > 0
+
+
+def export_csv(conn, file, category=None):
+    """Write expenses (oldest first) as CSV to an open text file.
+
+    ``file`` must be opened with ``newline=""``. Returns the number of rows
+    written (excluding the header). ``category`` filters like list_expenses.
+    """
+    rows = list_expenses(conn, category)[::-1]  # list is newest-first
+    writer = csv.writer(file)
+    writer.writerow(CSV_FIELDS)
+    for r in rows:
+        writer.writerow([r["id"], r["date"], f"{r['amount']:.2f}",
+                         r["category"], r["description"]])
+    return len(rows)

@@ -25,6 +25,10 @@ def build_parser():
     rep.add_argument("month", nargs="?",
                      help="YYYY-MM (default: current month)")
 
+    ex = sub.add_parser("export", help="export expenses to a CSV file")
+    ex.add_argument("path", help="output .csv path")
+    ex.add_argument("-c", "--category", help="only export this category")
+
     rm = sub.add_parser("delete", help="delete an expense by id")
     rm.add_argument("id", type=int)
     return p
@@ -63,6 +67,10 @@ def main(argv=None, out=sys.stdout):
         elif args.command == "report":
             month = args.month or date.today().strftime("%Y-%m")
             print(format_report(month, store.monthly_summary(conn, month)), file=out)
+        elif args.command == "export":
+            with open(args.path, "w", newline="", encoding="utf-8") as f:
+                n = store.export_csv(conn, f, args.category)
+            print(f"Exported {n} expense(s) to {args.path}", file=out)
         elif args.command == "delete":
             if store.delete_expense(conn, args.id):
                 print(f"Deleted expense #{args.id}", file=out)
