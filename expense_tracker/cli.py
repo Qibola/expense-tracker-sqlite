@@ -1,9 +1,10 @@
 """Command-line interface: python -m expense_tracker.cli <command>."""
 import argparse
+import os
 import sys
 from datetime import date
 
-from . import db, store
+from . import chart, db, store
 
 
 def build_parser():
@@ -28,6 +29,10 @@ def build_parser():
     ex = sub.add_parser("export", help="export expenses to a CSV file")
     ex.add_argument("path", help="output .csv path")
     ex.add_argument("-c", "--category", help="only export this category")
+
+    ch = sub.add_parser("chart", help="write an interactive spending chart (HTML)")
+    ch.add_argument("path", nargs="?", default="output/spending.html",
+                    help="output .html path (default: output/spending.html)")
 
     rm = sub.add_parser("delete", help="delete an expense by id")
     rm.add_argument("id", type=int)
@@ -71,12 +76,20 @@ def main(argv=None, out=sys.stdout):
             with open(args.path, "w", newline="", encoding="utf-8") as f:
                 n = store.export_csv(conn, f, args.category)
             print(f"Exported {n} expense(s) to {args.path}", file=out)
+        elif args.command == "chart":
+            os.makedirs(os.path.dirname(args.path) or ".", exist_ok=True)
+            chart.write_chart(conn, args.path)
+            print(f"Wrote chart to {args.path}", file=out)
         elif args.command == "delete":
             if store.delete_expense(conn, args.id):
                 print(f"Deleted expense #{args.id}", file=out)
             else:
                 print(f"No expense with id {args.id}", file=sys.stderr)
                 return 1
+    except ImportError:
+        print("Error: the chart needs plotly; run `pip install -r requirements.txt`",
+              file=sys.stderr)
+        return 1
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1

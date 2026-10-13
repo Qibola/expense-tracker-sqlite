@@ -94,3 +94,17 @@ def export_csv(conn, file, category=None):
         writer.writerow([r["id"], r["date"], f"{r['amount']:.2f}",
                          r["category"], r["description"]])
     return len(rows)
+
+
+def spending_by_month_category(conn):
+    """Total spending for every (month, category) pair.
+
+    Returns a list of (month 'YYYY-MM', category, total) tuples ordered by
+    month then category name. Used as the data source for the chart.
+    """
+    rows = conn.execute(
+        "SELECT substr(e.date, 1, 7) AS month, c.name AS category, "
+        "SUM(e.amount) AS total "
+        "FROM expenses e JOIN categories c ON c.id = e.category_id "
+        "GROUP BY month, c.id ORDER BY month, c.name").fetchall()
+    return [(r["month"], r["category"], r["total"]) for r in rows]
